@@ -3,7 +3,7 @@ import functools;
 import time;
 import types;
 import warnings;
-from ModuleWrapper.utils import *;
+from .utils import *;
 
 
 
