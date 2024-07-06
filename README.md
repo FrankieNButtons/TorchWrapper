@@ -1,2 +1,2 @@
-# ModuleWarpper
-a performance evaluating wrapper for Python modules
+# TorchWarpper
+a performance evaluating wrapper for Python module torch.
