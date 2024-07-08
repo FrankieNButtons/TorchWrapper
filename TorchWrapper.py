@@ -1,14 +1,3 @@
-import functools;
-import time;
-import types;
-import json;
-import os;
-import operator;
-import pandas as pd;
-import torch;
-from .utils import *;
-from .decorators import *;
-
 """
 *****************************
 The Structure For callRecords
@@ -20,11 +9,13 @@ callRecords
 │   ├── TotalTime(ms): 150.0
 │   │
 │   ├── 1
+│   │   ├── detailedAPIName: 
 │   │   ├── StartTimestamp: 1625150800123456789
 │   │   ├── CostTime(ms): 50.0
 │   │   └── Arguments: (arg1, arg2, ...)
 │   │
 │   ├── 2
+│   │   ├── detailedAPIName: 
 │       ├── StartTimestamp: 1625150860123456789
 │       ├── CostTime(ms): 100.0
 │       └── Arguments: (arg1, arg2, ...)
@@ -34,10 +25,12 @@ callRecords
 │   ├── TotalTime(ms): 200.0
 │   │
 │   ├── 1
+│   │   ├── detailedAPIName: 
 │       ├── StartTimestamp: 1625150900123456789
 │       ├── CostTime(ms): 200.0
 │       └── Arguments: (arg1, arg2, ...)
 """
+sys.setrecursionlimit(5000);
 
 class TorchWrapper:
     """
@@ -47,9 +40,10 @@ class TorchWrapper:
     """
     
     # Some const for restoring default or checking steps.
+    GOAL_MODULE = "torch";
     DEFAULT_FORMAT = "csv";
     DEFAULT_NAME_EPEC = "timestamp";
-    SUPPORTED_FORMATS = ["json", "csv", "html"];
+    SUPPORTED_FORMATS = ["json", "csv", "html", "xlsx"];
     SUPPORETD_NAME_SPEC = ["timestamp", "datetime", "serial"];
 
     class ConfigKey:
@@ -113,7 +107,8 @@ class TorchWrapper:
     Decorator Section
     ******************
     """
-    def CountDecorator(func: str):
+    
+    def CountDecorator(self, func: str):
         """
         **Description**
         A decorator that count the call of a function and record it in a dictionary.
@@ -124,7 +119,9 @@ class TorchWrapper:
         **return**
         wrapper: a function that has been counted calling times.
         """
-        @functools.warps(func)
+        funcName = getAPIName(func);
+        print(f"decorating function {funcName}");
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # initialize the record.            
             record = {
@@ -156,6 +153,7 @@ class TorchWrapper:
             
             return result;
         wrapper.isDecorated = True;
+        print(f"{funcName} decorated.");
         return wrapper;
         
     """
@@ -164,7 +162,62 @@ class TorchWrapper:
     ******************
     """
     
-    def decorateModule(self, module: types.ModuleType, visited=None: set):
+    def decorateClass(self, cls, depth=0, max_depth=30):
+        """
+        **Description**
+        Decorates all the methods of a class with CountDecorator and records the API names.
+
+        **params**
+        cls (Class): The class whose methods are to be decorated.
+        depth (int): Current recursion depth.
+        max_depth (int): Maximum allowed recursion depth.
+
+        **returns**
+        cls: The class with its methods decorated.
+        """
+        clsName = getAPIName(cls);
+        if isFromModule(cls,TorchWrapper.GOAL_MODULE):
+            if depth > max_depth:
+                print(f"Maximum recursion depth {max_depth} exceeded in class {cls.__name__}.");
+                return cls;
+
+            try:
+                assert isinstance(cls, type), f"`{cls}` must be a class."
+
+                if isDecorated(cls):
+                    print(f"module {clsName} has been decorated, out.");
+                    return cls;
+                cls.isDecorated = True;
+
+                attributes = getAttributes(cls);
+                if attributes:
+                    print(f"descending into class {cls}, depth={depth}");
+                    for name in attributes:
+                        print(f"descending into {cls.__name__}.{name}, depth={depth}");
+                        method = getattr(cls, name);
+                        apiName = getAPIName(method);
+                        if isinstance(method, types.FunctionType) and isFromModule(method, TorchWrapper.GOAL_MODULE):
+                            print(f"Decorating {apiName}, depth={depth}");
+                            setattr(cls, name, self.CountDecorator(method));
+                        elif isinstance(method, type) and isFromModule(method, TorchWrapper.GOAL_MODULE) and not isDecorated(method):
+                            setattr(cls, name, self.decorateClass(method, depth + 1, max_depth));
+#                         elif isinstance(method, types.ModuleType):
+#                             setattr(cls, name, self.decorateModule(method));
+                            
+
+            except TypeError as e:
+                if "immutable type" in str(e):
+                    print(f"{cls} is an immutable type, out.");
+                    return cls;
+
+            return cls;
+        else:
+            print(f"class {clsName} is not from module {TorchWrapper}, out.");
+            return cls;
+
+    
+    
+    def decorateModule(self, module: types.ModuleType):
         """
         **Description**
         a function that can wrap the hole module with CountDecorator.
@@ -176,23 +229,30 @@ class TorchWrapper:
         **returns**
         a module that has been fully decorated.
         """
-        assert isinstance(module), "`module`must be a module.";
-        
-        if visited = None:
-            visited = None;
-        elif module in visited:
-            return;
-        visited.add(getAPIName(module))
-            
-        
-        for name in getAttribututes(module):
-            print("descending into {} from ")
-            func = getattr(module, name);
-            if isinstance(func, types.ModuleType):
-                setattr(module, func.__name__, decorateModule(func, visited));
-            elif isinstance(func, types.FunctionType):
-                decoratedFunc = CountDecorator(func);
-                setattr(module, func.__name__, decoratedFunc);
+        moduleName = getAPIName(module);
+        if isFromModule(module, TorchWrapper.GOAL_MODULE):
+            assert isinstance(module, types.ModuleType), f"`{module}`must be a module.";
+            if isDecorated(module):
+                print(f"module {moduleName} has been decorated, out.");
+                return module;
+            module.isDecorated = True;
+
+
+            for name in getAttributes(module):
+                func = getattr(module, name);
+                if isinstance(func, types.ModuleType) and isFromModule(func, TorchWrapper.GOAL_MODULE):
+                    setattr(module, name, self.decorateModule(func));
+                elif isinstance(func, types.FunctionType) and isFromModule(func, TorchWrapper.GOAL_MODULE):
+                    if not getattr(func, 'isDecorated', False):
+                        print(f"{name} hasn't been decorated, decorate {name}.");
+                        decoratedFunc = self.CountDecorator(func);
+                        setattr(module, name, decoratedFunc);
+                        print(f"{name} hasn't been decorated.")
+                elif isinstance(func, type) and isFromModule(func, TorchWrapper.GOAL_MODULE) and not isDecorated(func):
+                    setattr(module, name, self.decorateClass(func));
+        else:
+            print(f"module {moduleName} is a external module, not in {TorchWrapper.GOAL_MODULE}.");
+            return module;
     
     """
     **************
@@ -214,8 +274,9 @@ class TorchWrapper:
                 maxSize = int(maxSize[:-2]) * (1024 ** 3);
             return maxSize;
   
-                          
-    def getFileNameSuffix(self, file_name_spec: str):
+    # get the name of file to save
+    def getFileNameSuffix(self):
+        file_name_spec = config[TorchWrapper.ConfigKey.FILE_NAME_SPEC];
         if file_name_spec == "timestamp":
             return time.time_ns();
         elif file_name_spec == "datetime":
@@ -224,7 +285,7 @@ class TorchWrapper:
             raise NotImplementedError;
                           
     # Prepare the result saving directory
-    def setPath(path):
+    def setPath(self, path):
         if os.path.exists(path):
             if not os.path.isdir(path):
                 raise ValueError(f"Path {path} is not a directory");
@@ -232,29 +293,60 @@ class TorchWrapper:
             os.makedirs(path);
         return path;
     
-        
-        
-    # 
-    def saveRecord(config: dict, fileName: str):
-        def getFileName():
+    # get the name of file to save
+    def getFileName(self, config: dict) -> str:
+        """TODO: parse filename from config dictionary."""
+        suffix = self.getFileNameSuffix();
+        fileName = f"TorchWrapper_Result_{suffix}";
+        return fileName;
+    
+    # get the name of DataFrame formatted callRecords to save
+    def getDFFormattedCallRecords(self):
+        """Formats the call records as a pandas DataFrame."""
+        records = []
+        for apiName, calls in self.callRecords.items():
+            totalTime = calls.pop(TorchWrapper.CallRecordKey.ResultKey.TOTAL_TIME, 0);
+            for callNumber, call in calls.items():
+                record = {
+                    TorchWrapper.CallRecordKey.API_NAME: apiName,
+                    TorchWrapper.CallRecordKey.ResultKey.TOTAL_TIME: totalTime,
+                    TorchWrapper.CallRecordKey.ResultKey.CALL_NUMBER: callNumber,
+                    TorchWrapper.CallRecordKey.ResultKey.START_TIMESTAMP: call[TorchWrapper.CallRecordKey.ResultKey.START_TIMESTAMP],
+                    TorchWrapper.CallRecordKey.ResultKey.COST_TIME: call[TorchWrapper.CallRecordKey.ResultKey.COST_TIME],
+                    TorchWrapper.CallRecordKey.ResultKey.ARGUMENTS: call[TorchWrapper.CallRecordKey.ResultKey.ARGUMENTS]
+                };
+                records.append(record);
+        return pd.DataFrame(records);
+    
+    # Save the result to specific file
+    def saveRecord(self, config: dict):
+        def saveToJson(data, path: str, fileName: str):
+            """Save DataFrame formatted call records to a .json file."""
+            data.to_json(f"{path}/{fileName}.json", orient='records', lines=True);
             
-        def saveToJson(fileName: str):
-            """TODO: save DataFrame formatted callRecorded to a .json file."""
+        def saveToCSV(data, path: str, fileName: str):
+            """Save DataFrame formatted call records to a .csv file."""
+            data.to_csv(f"{path}/{fileName}.csv", index=False);
             
-        def saveToCSV(fileName: str):
-            """TODO: save DataFrame formatted callRecorded to a .csv file."""
+        def saveToExcel(data, path: str, fileName: str):
+            """Save DataFrame formatted call records to a .xlsx file."""
+            data.to_excel(f"{path}/{fileName}.xlsx", index=False);
             
-        def saveToExcel(fileName: str):
-            """TODO: save DataFrame formatted callRecorded to a .excel file."""
+        def saveToHTML(data, path: str, fileName: str):
+            """Save DataFrame formatted call records to a .html file."""
+            data.to_html(f"{path}/{fileName}.html", index=False);
             
-        def saveToHTML(fileName: str):
-            """TODO: save DataFrame formatted callRecorded to a .html file"""
-            
-        def getFileName(config: dict) -> str:
-        
-        
-        getFileName(config);
+        fileName = self.getFileName(config);
         data = self.getDFFormattedCallRecords();
+        outputPath = self.setPath(config[TorchWrapper.ConfigKey.OUT_DIR]);
+        if config[TorchWrapper.ConfigKey.FORMAT] == "json":
+            saveToJson(data, outputPath, fileName);
+        elif config[TorchWrapper.ConfigKey.FORMAT] == "csv":
+            saveToCSV(data, outputPath, fileName);
+        elif config[TorchWrapper.ConfigKey.FORMAT] == "xlsx":
+            saveToExcel(data, outputPath, fileName);
+        elif config[TorchWrapper.ConfigKey.FORMAT] == "html":
+            saveToHTML(data, outputPath, fileName);
 
     """
     ******************
@@ -262,14 +354,26 @@ class TorchWrapper:
     ******************
     """
     
-        def start(self, func):
-            """
-            **Description**
-            """
-            config = self.parseConfig(config);
-            self.decorateModule(torch);
-            func()
-            
-            fileName = self.getFileNameSuffix(config);
-            #  self.saveReport(self.callRecords);
+    def start(self, func: types.FunctionType):
+        """
+        **Description**
+        Starts the wrapping and recording process.
+
+        **params**
+        func(FunctionType): The function to be executed and recorded.
         
+        **raises**
+        ValueError: If there is an error executing the function.
+        """
+        print(f"Starts decorating torch module.");
+        self.decorateModule(torch);
+        print("torch module decorating complete.");
+        try:
+            print(f"Starts evaluating {func.__name__}");
+            func();
+            
+        except Exception as e:
+            raise ValueError("Error executing the function.") from e;
+        print("start saving results.");
+        self.saveRecord(config);
+        print(f"results file saved.");
