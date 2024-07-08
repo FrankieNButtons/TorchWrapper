@@ -51,7 +51,7 @@ def APIDecorator(func: str, module: str=None):
         return result, apiName, startTimestamp, costTime;
     if module == None:
         return wrapper;
-    elif func.__module__.startswith(module):
+    elif isFuncFromModule(func, module):
         return wrapper;
     else:
         # raise ValueError(f"the function `{apiName}` is not from module `{module}`");
