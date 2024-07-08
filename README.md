@@ -3,9 +3,40 @@
 a performance evaluating wrapper for Python module torch.
 
 
-
-
-
+## User Manual
+### import TorchWrapper and torch module
+```python
+from TorchWrapper import TorchWrapper;
+import torch;
+```
+### set configuration
+define a config in the structure below
+```python
+config = {
+    "out_dir": "./output",
+    "format": "csv",
+    "file_max_size": "10MB",
+    "file_name_spec": "timestamp"
+};
+```
+### Instantiation
+```python
+wrapper = TorchWrapper(config);
+```
+### pack your torch code in a function
+e.g. a very simple function myCode:
+```python
+def myCode():
+    a = torch.randn(1, 3);
+    b = torch.randn(1, 3);
+    c = a + b;
+    return c;
+```
+### runyour code with TorchWrapper decorated:
+```python
+wrapper.start(myCode);
+```
+Then your extimation of performance will be saved to path `out_dir` defined in your `config`.
 
 ## Utilities
 ### 日记板块
@@ -17,3 +48,20 @@ a performance evaluating wrapper for Python module torch.
 #### 2024年7月8日
 ##### 14:00
 好诶！！！有点进度了！！！！！！
+##### 18:20
+心累了，问题还是很多，已经尝试了：
+1. 增加递归深度（但直接溢出）
+2. 增加拓扑层数限制（无效）
+3. 指定`torch`模组子块（能跑，但没看出明显变化）
+4. ......
+
+修复了：
+1. config的返回问题
+2. 各种self的指定
+3. ......
+
+待解决：
+1. 装饰对象的类型问题
+2. 装饰函数的完整性问题
+3. 递归调用的冗余循环问题
+4. ......
