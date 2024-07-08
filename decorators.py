@@ -41,17 +41,18 @@ def APIDecorator(func: str, module: str=None):
     func(String): the function to be recorded.
     
     **returns**
-    wrapper: a API usage recored functiion.
+    wrapper: a API usage recored function.
     """
     apiName = getAPIName(func)
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         apiName = getAPIName(func)
         result, startTimestamp, costTime= TimerDecorator(func)(*args, **kwargs);
+        print(f"{apiName} starts from {startTimestamp} costs {costTime}ms.");
         return result, apiName, startTimestamp, costTime;
     if module == None:
         return wrapper;
-    elif isFuncFromModule(func, module):
+    elif isFromModule(func, module):
         return wrapper;
     else:
         # raise ValueError(f"the function `{apiName}` is not from module `{module}`");
