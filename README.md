@@ -27,7 +27,7 @@ config = {
     "file_max_size": "128MB",
     "file_name_spec": "timestamp"
 };
-``
+```
 ### Instantiation
 ```python
 wrapper = TorchWrapper(config);
