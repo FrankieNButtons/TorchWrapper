@@ -41,7 +41,7 @@ def myCode():
     c = a + b;
     return c;
 ```
-### runyour code with TorchWrapper decorated:
+### run your code with TorchWrapper decorated:
 ```python
 wrapper.start(myCode);
 ```
