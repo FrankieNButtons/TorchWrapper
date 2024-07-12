@@ -4,12 +4,13 @@ a performance evaluating wrapper for Python module torch.
 
 
 ## User Manual
-### import TorchWrapper and torch module
+### TorchWrapper
+#### import TorchWrapper and torch module
 ```python
 from TorchWrapper import TorchWrapper;
 import torch;
 ```
-### set configuration
+#### set configuration
 define a config in the structure below
 ```python
 config = {
@@ -28,11 +29,11 @@ config = {
     "file_name_spec": "timestamp"
 };
 ```
-### Instantiation
+#### Instantiation
 ```python
 wrapper = TorchWrapper(config);
 ```
-### pack your torch code in a function
+#### pack your torch code in a function
 e.g. a very simple function myCode:
 ```python
 def myCode():
@@ -41,13 +42,13 @@ def myCode():
     c = a + b;
     return c;
 ```
-### run your code with TorchWrapper decorated:
+#### run your code with TorchWrapper decorated:
 ```python
 wrapper.start(myCode);
 ```
 Then your extimation of performance will be saved to path `out_dir` defined in your `config`.
-### Some important Data Structures you might like to know
-#### callRecords
+#### Some important Data Structures you might like to know
+##### callRecords
 ```
 *****************************
 The Structure For callRecords
@@ -62,13 +63,13 @@ callRecords
 │   │   ├── detailedAPIName: 
 │   │   ├── StartTimestamp: 1625150800123456789
 │   │   ├── CostTime(ms): 50.0
-│   │   └── Arguments: (arg1, arg2, ...)
+│   │   └── Arguments: ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...})
 │   │
 │   ├── 2
 │   │   ├── detailedAPIName: 
 │       ├── StartTimestamp: 1625150860123456789
 │       ├── CostTime(ms): 100.0
-│       └── Arguments: (arg1, arg2, ...)
+│       └── Arguments: ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...})
 │
 ├── API_2
 │   │
@@ -78,15 +79,22 @@ callRecords
 │   │   ├── detailedAPIName: 
 │       ├── StartTimestamp: 1625150900123456789
 │       ├── CostTime(ms): 200.0
-│       └── Arguments: (arg1, arg2, ...)
+│       └── Arguments: ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...})
 ```
-#### DataFrame Formatted callRecords
-| API Name | Total Time (ms) | Call Number | Start Timestamp     | Cost Time (ms) | Arguments         |
-|----------|-----------------|-------------|---------------------|----------------|-------------------|
-| API_1    | 150.0           | 1           | 1625150800123456789 | 50.0           | (arg1, arg2, ...) |
-| API_1    | 150.0           | 2           | 1625150860123456789 | 100.0          | (arg1, arg2, ...) |
-| API_2    | 200.0           | 1           | 1625150900123456789 | 200.0          | (arg1, arg2, ...) |
+##### DataFrame Formatted callRecords
+| API Name | Total Time (ms) | Call Number | Start Timestamp     | Cost Time (ms) | Arguments                                                  |
+|----------|-----------------|-------------|---------------------|----------------|------------------------------------------------------------|
+| API_1    | 150.0           | 1           | 1625150800123456789 | 50.0           | ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...}) |
+| API_1    | 150.0           | 2           | 1625150860123456789 | 100.0          |n((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...}) |
+| API_2    | 200.0           | 1           | 1625150900123456789 | 200.0          | ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...}) |
 
+### apitools
+#### getAPIName(get the Shortest callable name of an API)
+```python
+import torch
+import torch.optim as optim
+getAPIName(optim.Adam) # rather than Adam or torch.
+```
 
 ## Utilities
 ### 日记板块
@@ -145,16 +153,16 @@ ChatGPT是用不得的！！！
 
 查看以后感觉并不如想象中的记录那么复杂，其实randn就是独立的可调用模块，没有那么多杂七杂八的子模块的，所以记录还是挺简洁的。不过啊，后续我又那自己写的简单MLP做了测试，结果报错依然出现在了`optimizer`处，我想自动微分这么精密的模块也确实是比较难搞吧。
 
-
-
-
-#### 2024年7月12日
-##### 11:30
-今天《卑鄙的我4》上映啦，有机会要去看一看，刚刚提交了第一版可以跑起来的版本，我就称之为0.1.0beta了！！！！！Yeah!!!
-
-不过`Optimizer`的存在依旧会导致一些callRecords记录问题，还有时间，可以继续修改，Yeah!!!
 ##### 11:20
 啊啊啊啊啊啊，在加入了对于父类对子方法引用存在的判断机制后，他竟然跑通了！！！！！！！！！！！！！！！！！
 
 待会儿再进行进一步的测试看看我写的和他们之前写的有什么区别，今天起码会传一个版本吧。不过下午项目负责的老师也要来看看进度和简单交流，浅浅期待一下吧。
 
+#### 2024年7月12日
+##### 11:30
+今天《卑鄙的我4》上映啦，有机会要去看一看，刚刚提交了第一版可以跑起来的版本，我就称之为**0.1.0beta**了！！！！！Yeah!!!
+
+不过`Optimizer`的存在依旧会导致一些`callRecords`的记录问题，还有时间，可以继续修改，Yeah!!!
+
+##### 16:30
+不过今天没做出什么新花样，在尝试着做昨天团队布置的`testcase`的全盘测试，总体进展不大吧，就是上传和完善了昨天的成果。
