@@ -3,6 +3,8 @@ All the packed universal functions are stored here.
 """
 import types;
 import typing;
+import torch;
+from collections import deque;
 
 def getAPIName(api: typing.Any) -> str:
     """
@@ -141,4 +143,48 @@ def isDecorated(obj: typing.Any, visited: list = None) -> bool:
         return getattr(obj, "_isDecorated", False);
     else:
         return getAPIName(obj) in visited;
+
+
+def torchIndex(name: str, module: types.ModuleType = torch, max_depth: int = 4, display: bool = True):
+    """
+    **description**
+    Perform a breadth-first search (BFS) to find all paths in the torch module
+    containing the specified name and optionally display them.
+
+    **params**
+    name(String): The name of function or module to be searched.
+    module: The root module to start searching from.
+    max_depth: The maximum depth to search.
+    display(Boolean): Whether to print out the paths got in during searing process or not.
+
+    **returns**
+    A list of all matching paths.
+    """
+    def getAllPath(module=module, max_depth=max_depth):
+
+        results = [];
+        queue = deque([(module, "torch", 0)]);
+        while queue:
+            current_module, current_path, depth = queue.popleft();
+            if depth > max_depth:
+                continue;
+            for attr_name in dir(current_module):
+                try:
+                    attr = getattr(current_module, attr_name);
+                except AttributeError:
+                    continue;
+                full_path = f"{current_path}.{attr_name}";
+                if isinstance(attr, types.ModuleType):
+                    if attr is not torch:  # Ensure we do not recurse into torch again
+                        queue.append((attr, full_path, depth + 1));
+                elif isinstance(attr, (types.FunctionType, type)):
+                    if full_path.rfind(".") != -1 and full_path[full_path.rfind(".")+1:].lower() == name.lower():
+                        results.append(full_path);
+                        if display:
+                            print(full_path);
+        return results;
+
+    return getAllPath(torch);
+
+
 
