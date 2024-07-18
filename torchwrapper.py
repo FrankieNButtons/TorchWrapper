@@ -8,7 +8,7 @@ import pandas as pd;
 import torch;
 # import sys;
 
-from.decorators import APIdecorator;
+from.decorators import APIDecorator;
 from apitools import *;
 
 """
