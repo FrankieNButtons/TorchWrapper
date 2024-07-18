@@ -1,2 +1,2 @@
-__version__ = "0.0.1beta"
-from TorchWrapper import TorchWrapper;
+__version__ = "0.1.0beta"
+from torchwrapper import TorchWrapper;
