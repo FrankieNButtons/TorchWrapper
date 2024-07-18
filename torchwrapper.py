@@ -8,8 +8,8 @@ import pandas as pd;
 import torch;
 # import sys;
 
-from.decorators import APIDecorator;
-from apitools import *;
+from .decorators import APIDecorator;
+from .apitools import *;
 
 """
 *****************************
