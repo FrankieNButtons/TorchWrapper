@@ -160,7 +160,7 @@ def torchIndex(name: str, module: types.ModuleType = torch, max_depth: int = 4, 
     **returns**
     A list of all matching paths.
     """
-    def getAllPath(module=module, max_depth=max_depth):
+    def getAllPath(module, max_depth=max_depth):
 
         results = [];
         queue = deque([(module, "torch", 0)]);
@@ -184,7 +184,7 @@ def torchIndex(name: str, module: types.ModuleType = torch, max_depth: int = 4, 
                             print(full_path);
         return results;
 
-    return getAllPath(torch);
+    return getAllPath(module);
 
 
 
