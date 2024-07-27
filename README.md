@@ -89,11 +89,22 @@ callRecords
 | API_2    | 200.0           | 1           | 1625150900123456789 | 200.0          | ((arg1, arg2, ...), {"kwarg1": val1, "kwarg2": val2, ...}) |
 
 ### apitools
-#### getAPIName(get the Shortest callable name of an API)
+#### Method 1: `getAPIName`
+##### Function
+Retrieve the fully qualified name of a given API.
+##### Demo
 ```python
+from apitools import getAPIName
 import torch
-import torch.optim as optim
-getAPIName(optim.Adam) # rather than Adam or torch.
+
+api_name = getAPIName(torch.optim.Adam)
+print(api_name)
+```
+Display & Returns
+```
+Display: None
+Returns: 'torch.optim.Adam'
+
 ```
 
 ## Utilities
